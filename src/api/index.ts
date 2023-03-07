@@ -1,6 +1,7 @@
 import type { AxiosProgressEvent, GenericAbortSignal } from 'axios'
 import { post } from '@/utils/request'
-
+import { getToken } from '@/store/modules/auth/helper'
+import { enCrypto } from '@/utils/crypto/index'
 export function fetchChatAPI<T = any>(
   prompt: string,
   options?: { conversationId?: string; parentMessageId?: string },
@@ -28,7 +29,7 @@ export function fetchChatAPIProcess<T = any>(
 ) {
   return post<T>({
     url: '/chat-process',
-    data: { prompt: params.prompt, options: params.options },
+    data: { prompt: params.prompt, options: params.options, salt: enCrypto(`yuwangifeng${params.prompt.length}19901102`) },
     signal: params.signal,
     onDownloadProgress: params.onDownloadProgress,
   })
@@ -38,5 +39,12 @@ export function fetchVerify<T = any>(secretKey: string) {
   return post<T>({
     url: '/verify',
     data: { secretKey },
+  })
+}
+
+export function deduction<T = any>(params: { balance: number }) {
+  return post<T>({
+    url: '/deduction',
+    data: { secretKey: getToken(), balance: params.balance },
   })
 }

@@ -9,7 +9,7 @@ import { useCopyCode } from './hooks/useCopyCode'
 import { HoverButton, SvgIcon } from '@/components/common'
 import { useBasicLayout } from '@/hooks/useBasicLayout'
 import { useChatStore } from '@/store'
-import { fetchChatAPIProcess } from '@/api'
+import { deduction, fetchChatAPIProcess } from '@/api'
 import { t } from '@/locales'
 
 let controller = new AbortController()
@@ -38,7 +38,7 @@ function handleSubmit() {
 
 async function onConversation() {
   const message = prompt.value
-
+  let costTotal = 0
   if (loading.value)
     return
 
@@ -52,6 +52,7 @@ async function onConversation() {
     {
       dateTime: new Date().toLocaleString(),
       text: message,
+      cost: 0,
       inversion: true,
       error: false,
       conversationOptions: null,
@@ -74,6 +75,7 @@ async function onConversation() {
     {
       dateTime: new Date().toLocaleString(),
       text: '',
+      cost: 0,
       loading: true,
       inversion: false,
       error: false,
@@ -98,14 +100,23 @@ async function onConversation() {
           chunk = responseText.substring(lastIndex)
         try {
           const data = JSON.parse(chunk)
+          // debugger
+          const length: number = message.length + (data.text || '').length
+
+          const cost = Number(Number(length * 2 * 10 * 0.000014).toFixed(6))
+
+          costTotal = cost
+          // console.log('===========', data.text, cost)
+          const text = `${data.text || ''} \n\n> 花费: ${cost}￥`
           updateChat(
             +uuid,
             dataSources.value.length - 1,
             {
               dateTime: new Date().toLocaleString(),
-              text: data.text ?? '',
+              text,
               inversion: false,
               error: false,
+              cost,
               loading: false,
               conversationOptions: { conversationId: data.conversationId, parentMessageId: data.id },
               requestOptions: { prompt: message, options: { ...options } },
@@ -120,6 +131,7 @@ async function onConversation() {
     })
   }
   catch (error: any) {
+    console.error(error?.message)
     const errorMessage = error?.message ?? t('common.wrong')
 
     if (error.message === 'canceled') {
@@ -142,6 +154,7 @@ async function onConversation() {
         dataSources.value.length - 1,
         {
           text: `${currentChat.text}\n[${errorMessage}]`,
+          cost: 0,
           error: false,
           loading: false,
         },
@@ -155,6 +168,7 @@ async function onConversation() {
       {
         dateTime: new Date().toLocaleString(),
         text: errorMessage,
+        cost: 0,
         inversion: false,
         error: true,
         loading: false,
@@ -166,13 +180,23 @@ async function onConversation() {
   }
   finally {
     loading.value = false
+
+    console.error('costTotal', costTotal)
+
+    if (costTotal) {
+      deduction({ balance: costTotal }).then((res) => {
+        console.error('res', res)
+      }).catch((err) => {
+        console.error('err', err)
+      })
+    }
   }
 }
 
 async function onRegenerate(index: number) {
   if (loading.value)
     return
-
+  let costTotal = 0
   controller = new AbortController()
 
   const { requestOptions } = dataSources.value[index]
@@ -192,6 +216,7 @@ async function onRegenerate(index: number) {
     {
       dateTime: new Date().toLocaleString(),
       text: '',
+      cost: 0,
       inversion: false,
       error: false,
       loading: true,
@@ -215,12 +240,19 @@ async function onRegenerate(index: number) {
           chunk = responseText.substring(lastIndex)
         try {
           const data = JSON.parse(chunk)
+          const length: number = message.length + (data.text || '').length
+
+          const cost = Number(Number(length * 2 * 10 * 0.000014).toFixed(6))
+          costTotal = cost
+          // console.error('===========', data.text, cost)
+          const text = `${data.text || ''} \n\n> 花费: ${cost}￥`
           updateChat(
             +uuid,
             index,
             {
               dateTime: new Date().toLocaleString(),
-              text: data.text ?? '',
+              text,
+              cost: cost || 0,
               inversion: false,
               error: false,
               loading: false,
@@ -255,6 +287,7 @@ async function onRegenerate(index: number) {
       {
         dateTime: new Date().toLocaleString(),
         text: errorMessage,
+        cost: 0,
         inversion: false,
         error: true,
         loading: false,
@@ -265,6 +298,15 @@ async function onRegenerate(index: number) {
   }
   finally {
     loading.value = false
+
+    console.error('costTotal', costTotal)
+    if (costTotal) {
+      deduction({ balance: costTotal }).then((res) => {
+        console.error('res', res)
+      }).catch((err) => {
+        console.error('err', err)
+      })
+    }
   }
 }
 
@@ -333,7 +375,7 @@ const wrapClass = computed(() => {
 const footerClass = computed(() => {
   let classes = ['p-4']
   if (isMobile.value)
-    classes = ['sticky', 'left-0', 'bottom-0', 'right-0', 'p-2', 'pr-4', 'h-14', 'overflow-hidden']
+    classes = ['sticky', 'left-0', 'bottom-0', 'right-0', 'p-2', 'pr-4', 'overflow-hidden']
   return classes
 })
 
@@ -370,6 +412,7 @@ onUnmounted(() => {
                 :key="index"
                 :date-time="item.dateTime"
                 :text="item.text"
+                :cost="item.cost"
                 :inversion="item.inversion"
                 :error="item.error"
                 :loading="item.loading"

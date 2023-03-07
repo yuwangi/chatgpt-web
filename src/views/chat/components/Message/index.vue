@@ -11,6 +11,7 @@ import { t } from '@/locales'
 interface Props {
   dateTime?: string
   text?: string
+  cost?: number
   inversion?: boolean
   error?: boolean
   loading?: boolean
@@ -78,6 +79,7 @@ function handleRegenerate() {
           :inversion="inversion"
           :error="error"
           :text="text"
+          :cost="cost"
           :loading="loading"
         />
         <div class="flex flex-col">

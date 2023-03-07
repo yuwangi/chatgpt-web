@@ -4,6 +4,7 @@ declare namespace Chat {
 		dateTime: string
 		text: string
 		inversion?: boolean
+		cost?:number
 		error?: boolean
 		loading?: boolean
 		conversationOptions?: ConversationRequest | null

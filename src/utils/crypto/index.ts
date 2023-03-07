@@ -1,6 +1,6 @@
 import CryptoJS from 'crypto-js'
 
-const CryptoSecret = '__CRYPTO_SECRET__'
+const CryptoSecret = '__nana5201314__'
 
 export function enCrypto(data: any) {
   const str = JSON.stringify(data)
