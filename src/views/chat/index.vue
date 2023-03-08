@@ -187,7 +187,10 @@ async function onConversation() {
 
     if (costTotal) {
       deduction({ balance: costTotal }).then((res) => {
-        console.error('res', res)
+        console.error('res', res.data)
+        if(!res.data){
+          
+        }
       }).catch((err) => {
         console.error('err', err)
       })

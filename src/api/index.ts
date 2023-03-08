@@ -48,6 +48,12 @@ export function deduction<T = any>(params: { balance: number }) {
     data: { secretKey: getToken(), balance: params.balance },
   })
 }
+export function getBalance<T = any>() {
+  return post<T>({
+    url: '/getBalance',
+    data: { secretKey: getToken() },
+  })
+}
 
 export function fetchSession<T>() {
   return post<T>({

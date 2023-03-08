@@ -3,13 +3,15 @@ import { computed, ref } from 'vue'
 import { NButton, NInput, NPopconfirm, useMessage } from 'naive-ui'
 import type { Language, Theme } from '@/store/modules/app/helper'
 import { SvgIcon } from '@/components/common'
-import { useAppStore, useUserStore } from '@/store'
+import { useAppStore, useAuthStore, useUserStore } from '@/store'
 import type { UserInfo } from '@/store/modules/user/helper'
 import { getCurrentDate } from '@/utils/functions'
 import { t } from '@/locales'
+import { getBalance } from '@/api'
 
 const appStore = useAppStore()
 const userStore = useUserStore()
+const authStore = useAuthStore()
 
 const ms = useMessage()
 
@@ -22,6 +24,8 @@ const avatar = ref(userInfo.value.avatar ?? '')
 const name = ref(userInfo.value.name ?? '')
 
 const description = ref(userInfo.value.description ?? '')
+
+const balance = ref(0)
 
 const language = computed({
   get() {
@@ -62,6 +66,7 @@ function updateUserInfo(options: Partial<UserInfo>) {
 }
 
 function handleReset() {
+  authStore.removeToken()
   userStore.resetUserInfo()
   ms.success(t('common.success'))
   window.location.reload()
@@ -109,7 +114,16 @@ function clearData(): void {
   localStorage.removeItem('chatStorage')
   location.reload()
 }
+getData()
 
+function getData() {
+  getBalance().then((res) => {
+    console.error('res', res.data)
+    balance.value = res.data
+  }).catch((err) => {
+    console.error('err', err)
+  })
+}
 function handleImportButtonClick(): void {
   const fileInput = document.getElementById('fileInput') as HTMLElement
   if (fileInput)
@@ -147,7 +161,12 @@ function handleImportButtonClick(): void {
           {{ $t('common.save') }}
         </NButton>
       </div>
-
+      <div class="flex items-center space-x-4">
+        <span class="flex-shrink-0 w-[100px]">{{ $t('setting.Balance') }}</span>
+        <div class="flex flex-wrap items-center gap-4">
+          {{ balance }}
+        </div>
+      </div>
       <div class="flex items-center space-x-4">
         <span class="flex-shrink-0 w-[100px]">{{ $t('setting.chatHistory') }}</span>
 

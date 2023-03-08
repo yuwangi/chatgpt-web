@@ -41,6 +41,7 @@ export default {
     avatarLink: 'Avatar Link',
     name: 'Name',
     description: 'Description',
+    Balance: 'Account Balance',
     resetUserInfo: 'Reset UserInfo',
     chatHistory: 'ChatHistory',
     theme: 'Theme',

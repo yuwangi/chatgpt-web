@@ -38,6 +38,7 @@ export default {
     avatarLink: '頭貼連結',
     name: '名稱',
     description: '描述',
+    Balance: '賬戶餘額',
     resetUserInfo: '重設使用者資訊',
     chatHistory: '紀錄',
     theme: '主題',

@@ -41,6 +41,7 @@ export default {
     avatarLink: '头像链接',
     name: '名称',
     description: '描述',
+    Balance: '账户余额',
     resetUserInfo: '重置用户信息',
     chatHistory: '聊天记录',
     theme: '主题',
