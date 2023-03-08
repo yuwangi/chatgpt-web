@@ -6,7 +6,7 @@ import { auth } from './middleware/auth'
 const app = express()
 const router = express.Router()
 
-app.use(express.static('public'))
+app.use('/public', express.static('public'))
 app.use(express.json())
 
 app.all('*', (_, res, next) => {
@@ -59,6 +59,13 @@ router.post('/verify', async (req, res) => {
   catch (error) {
     res.send({ status: 'Fail', message: error.message, data: null })
   }
+})
+
+router.get('/image/*', (req, res) => {
+  res.sendFile(`${__dirname}/public/${req.path}`, (err) => {
+    if (err)
+      res.send({ status: 'Fail', message: '未获取到图片！请确认路径是否正确！' })
+  })
 })
 
 app.use('', router)
