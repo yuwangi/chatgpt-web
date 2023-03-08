@@ -17,7 +17,7 @@ export function defaultSetting(): UserState {
     userInfo: {
       avatar: 'https://yuwangi.github.io/images/20190930145233.jpg',
       name: 'yuwangi',
-      description: '',
+      description: 'by gpt-3.5-turbo',
     },
   }
 }

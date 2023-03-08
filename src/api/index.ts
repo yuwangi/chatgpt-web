@@ -35,10 +35,10 @@ export function fetchChatAPIProcess<T = any>(
   })
 }
 
-export function fetchVerify<T = any>(secretKey: string) {
+export function fetchVerify<T = any>(token: string) {
   return post<T>({
     url: '/verify',
-    data: { secretKey },
+    data: { token },
   })
 }
 
@@ -46,5 +46,11 @@ export function deduction<T = any>(params: { balance: number }) {
   return post<T>({
     url: '/deduction',
     data: { secretKey: getToken(), balance: params.balance },
+  })
+}
+
+export function fetchSession<T>() {
+  return post<T>({
+    url: '/session',
   })
 }
