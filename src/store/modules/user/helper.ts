@@ -17,7 +17,7 @@ export function defaultSetting(): UserState {
     userInfo: {
       avatar: 'https://yuwangi.github.io/images/20190930145233.jpg',
       name: 'yuwangi',
-      description: ' from  chatgpt',
+      description: '',
     },
   }
 }

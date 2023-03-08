@@ -9,6 +9,7 @@ export default {
     wrong: '好像出错了，请稍后再试。',
     success: '操作成功',
     failed: '操作失败',
+    hellow: '欢迎使用达尔AI',
   },
   chat: {
     placeholder: '来说点什么...（Shift + Enter = 换行）',
@@ -21,6 +22,7 @@ export default {
     deleteMessage: '删除消息',
     deleteMessageConfirm: '是否删除此消息?',
     deleteHistoryConfirm: '确定删除此记录?',
+    newChat: '新会话',
   },
   setting: {
     setting: '设置',

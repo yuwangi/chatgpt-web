@@ -103,7 +103,7 @@ async function onConversation() {
           // debugger
           const length: number = message.length + (data.text || '').length
 
-          const cost = Number(Number(length * 2 * 10 * 0.000014).toFixed(6))
+          const cost = Number(Number(length * 1 * 10 * 0.000014).toFixed(6))
 
           costTotal = cost
           // console.log('===========', data.text, cost)
@@ -242,7 +242,7 @@ async function onRegenerate(index: number) {
           const data = JSON.parse(chunk)
           const length: number = message.length + (data.text || '').length
 
-          const cost = Number(Number(length * 2 * 10 * 0.000014).toFixed(6))
+          const cost = Number(Number(length * 1 * 10 * 0.000014).toFixed(6))
           costTotal = cost
           // console.error('===========', data.text, cost)
           const text = `${data.text || ''} \n\n> 花费: ${cost}￥`
@@ -402,7 +402,7 @@ onUnmounted(() => {
           <template v-if="!dataSources.length">
             <div class="flex items-center justify-center mt-4 text-center text-neutral-300">
               <SvgIcon icon="ri:bubble-chart-fill" class="mr-2 text-3xl" />
-              <span>Aha~</span>
+              <span>{{ $t('common.hellow') }}</span>
             </div>
           </template>
           <template v-else>

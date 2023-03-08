@@ -9,6 +9,7 @@ export default {
     wrong: 'Something went wrong, please try again later.',
     success: 'Success',
     failed: 'Failed',
+    hellow: 'Welcome to Daer AI',
   },
   chat: {
     placeholder: 'Ask me anything...(Shift + Enter = line break)',
@@ -21,6 +22,7 @@ export default {
     deleteMessage: 'Delete Message',
     deleteMessageConfirm: 'Are you sure to delete this message?',
     deleteHistoryConfirm: 'Are you sure to clear this history?',
+    newChat: 'New chat',
   },
   setting: {
     setting: 'Setting',

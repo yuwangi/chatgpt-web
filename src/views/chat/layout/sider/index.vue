@@ -6,6 +6,7 @@ import List from './List.vue'
 import Footer from './Footer.vue'
 import { useAppStore, useChatStore } from '@/store'
 import { useBasicLayout } from '@/hooks/useBasicLayout'
+// import { t } from '@/locales'
 
 const appStore = useAppStore()
 const chatStore = useChatStore()
