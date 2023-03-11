@@ -12,7 +12,7 @@ export default {
     wrong: '好像出错了，请稍后再试。',
     success: '操作成功',
     failed: '操作失败',
-    hellow: '欢迎使用达尔AI',
+    hellow: '达尔AI',
     verify: '验证',
     unauthorizedTips: '未经授权，请先进行验证。',
   },
@@ -37,7 +37,7 @@ export default {
   setting: {
     setting: '设置',
     general: '总览',
-    config: '配置',
+    config: '联系',
     avatarLink: '头像链接',
     name: '名称',
     description: '描述',
@@ -50,6 +50,9 @@ export default {
     reverseProxy: '反向代理',
     timeout: '超时',
     socks: 'Socks',
+    user: '用户',
+    group: '群组',
+    author: '作者',
   },
 
 }

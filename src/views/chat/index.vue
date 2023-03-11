@@ -1,7 +1,9 @@
 <script setup lang='ts'>
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { NButton, NInput, useDialog, useMessage } from 'naive-ui'
+// import { NButton, NInput, useDialog, useMessage } from 'naive-ui'
+import { storeToRefs } from 'pinia'
+import { NAutoComplete, NButton, NInput, useDialog, useMessage } from 'naive-ui'
 import html2canvas from 'html2canvas'
 import { Message } from './components'
 import { useScroll } from './hooks/useScroll'
@@ -9,7 +11,7 @@ import { useChat } from './hooks/useChat'
 import { useCopyCode } from './hooks/useCopyCode'
 import { HoverButton, SvgIcon } from '@/components/common'
 import { useBasicLayout } from '@/hooks/useBasicLayout'
-import { useChatStore } from '@/store'
+import { useChatStore, usePromptStore } from '@/store'
 import { deduction, fetchChatAPIProcess } from '@/api'
 import { t } from '@/locales'
 
@@ -31,8 +33,15 @@ const { uuid } = route.params as { uuid: string }
 const dataSources = computed(() => chatStore.getChatByUuid(+uuid))
 const conversationList = computed(() => dataSources.value.filter(item => (!item.inversion && !item.error)))
 
+console.log('conversationList', conversationList.value)
+
 const prompt = ref<string>('')
 const loading = ref<boolean>(false)
+
+// 添加PromptStore
+const promptStore = usePromptStore()
+// 使用storeToRefs，保证store修改后，联想部分能够重新渲染
+const { promptList: promptTemplate } = storeToRefs<any>(promptStore)
 
 function handleSubmit() {
   onConversation()
@@ -92,6 +101,7 @@ async function onConversation() {
       prompt: message,
       options,
       signal: controller.signal,
+
       onDownloadProgress: ({ event }) => {
         const xhr = event.target
         const { responseText } = xhr
@@ -109,13 +119,13 @@ async function onConversation() {
 
           costTotal = cost
           // console.log('===========', data.text, cost)
-          const text = `${data.text || ''} \n\n> 花费: ${cost}￥`
+          // const text = `${data.text || ''} \n\n> 花费: ${cost}￥`
           updateChat(
             +uuid,
             dataSources.value.length - 1,
             {
               dateTime: new Date().toLocaleString(),
-              text,
+              text: data.text,
               inversion: false,
               error: false,
               cost,
@@ -188,8 +198,8 @@ async function onConversation() {
     if (costTotal) {
       deduction({ balance: costTotal }).then((res) => {
         console.error('res', res.data)
-        if(!res.data){
-          
+        if (!res.data) {
+
         }
       }).catch((err) => {
         console.error('err', err)
@@ -250,13 +260,13 @@ async function onRegenerate(index: number) {
           const cost = Number(Number(length * 1 * 10 * 0.000014).toFixed(6))
           costTotal = cost
           // console.error('===========', data.text, cost)
-          const text = `${data.text || ''} \n\n> 花费: ${cost}￥`
+          // const text = `${data.text || ''} \n\n> 花费: ${cost}￥`
           updateChat(
             +uuid,
             index,
             {
               dateTime: new Date().toLocaleString(),
-              text,
+              text: data.text,
               cost: cost || 0,
               inversion: false,
               error: false,
@@ -313,6 +323,31 @@ async function onRegenerate(index: number) {
       })
     }
   }
+}
+
+// 可优化部分
+// 搜索选项计算，这里使用value作为索引项，所以当出现重复value时渲染异常(多项同时出现选中效果)
+// 理想状态下其实应该是key作为索引项,但官方的renderOption会出现问题，所以就需要value反renderLabel实现
+const searchOptions = computed(() => {
+  if (prompt.value.startsWith('/')) {
+    return promptTemplate.value.filter((item: { key: string }) => item.key.toLowerCase().includes(prompt.value.substring(1).toLowerCase())).map((obj: { value: any }) => {
+      return {
+        label: obj.value,
+        value: obj.value,
+      }
+    })
+  }
+  else {
+    return []
+  }
+})
+// value反渲染key
+const renderOption = (option: { label: string }) => {
+  for (const i of promptTemplate.value) {
+    if (i.value === option.label)
+      return [i.key]
+  }
+  return []
 }
 
 function handleExport() {
@@ -450,9 +485,54 @@ onUnmounted(() => {
       >
         <div id="image-wrapper" class="w-full max-w-screen-xl m-auto" :class="[isMobile ? 'p-2' : 'p-4']">
           <template v-if="!dataSources.length">
-            <div class="flex items-center justify-center mt-4 text-center text-neutral-300">
+            <!-- <div class="flex items-center justify-center mt-4 text-center text-neutral-300">
               <SvgIcon icon="ri:bubble-chart-fill" class="mr-2 text-3xl" />
               <span>{{ $t('common.hellow') }}</span>
+            </div> -->
+            <div class="flex flex-col items-center text-sm h-full ">
+              <div class="text-gray-800 w-full md:max-w-2xl lg:max-w-3xl md:h-full md:flex md:flex-col px-6 dark:text-gray-100">
+                <h1 class="text-4xl font-semibold mt-10 ml-auto mr-auto mb-16">
+                  {{ $t('common.hellow') }}-ChatGPT
+                </h1><div class="flex items-start text-center gap-3.5">
+                  <div class="flex flex-col gap-3.5 flex-1">
+                    <svg stroke="currentColor" fill="none" stroke-width="1.5" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 m-auto" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="5" /><line x1="12" y1="1" x2="12" y2="3" /><line x1="12" y1="21" x2="12" y2="23" /><line x1="4.22" y1="4.22" x2="5.64" y2="5.64" /><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" /><line x1="1" y1="12" x2="3" y2="12" /><line x1="21" y1="12" x2="23" y2="12" /><line x1="4.22" y1="19.78" x2="5.64" y2="18.36" /><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" /></svg><h2 class="text-lg font-normal">
+                      Examples
+                    </h2><ul class="flex flex-col gap-3.5">
+                      <li class="w-full bg-gray-50 dark:bg-white/5 p-3 rounded-md after:content-['&quot;'] before:content-['&quot;']">
+                        Explain quantum computing in simple terms
+                      </li><li class="w-full bg-gray-50 dark:bg-white/5 p-3 rounded-md after:content-['&quot;'] before:content-['&quot;']">
+                        Got any creative ideas for a 10 year old’s birthday?
+                      </li><li class="w-full bg-gray-50 dark:bg-white/5 p-3 rounded-md after:content-['&quot;'] before:content-['&quot;']">
+                        How do I make an HTTP request in Javascript?
+                      </li>
+                    </ul>
+                  </div><div class="flex flex-col gap-3.5 flex-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" class="w-6 h-6 m-auto"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" /></svg><h2 class="text-lg font-normal">
+                      Capabilities
+                    </h2><ul class="flex flex-col gap-3.5">
+                      <li class="w-full bg-gray-50 dark:bg-white/5 p-3 rounded-md">
+                        Remembers what user said earlier in the conversation
+                      </li><li class="w-full bg-gray-50 dark:bg-white/5 p-3 rounded-md">
+                        Allows user to provide follow-up corrections
+                      </li><li class="w-full bg-gray-50 dark:bg-white/5 p-3 rounded-md">
+                        Trained to decline inappropriate requests
+                      </li>
+                    </ul>
+                  </div><div class="flex flex-col gap-3.5 flex-1">
+                    <svg stroke="currentColor" fill="none" stroke-width="1.5" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 m-auto" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg><h2 class="text-lg font-normal">
+                      Limitations
+                    </h2><ul class="flex flex-col gap-3.5">
+                      <li class="w-full bg-gray-50 dark:bg-white/5 p-3 rounded-md">
+                        May occasionally generate incorrect information
+                      </li><li class="w-full bg-gray-50 dark:bg-white/5 p-3 rounded-md">
+                        May occasionally produce harmful instructions or biased content
+                      </li><li class="w-full bg-gray-50 dark:bg-white/5 p-3 rounded-md">
+                        Limited knowledge of world and events after 2021
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div><div class="w-full h-48 flex-shrink-0" />
             </div>
           </template>
           <template v-else>
@@ -495,13 +575,14 @@ onUnmounted(() => {
               <SvgIcon icon="ri:download-2-line" />
             </span>
           </HoverButton>
-          <NInput
-            v-model:value="prompt"
-            type="textarea"
-            :autosize="{ minRows: 1, maxRows: 2 }"
-            :placeholder="placeholder"
-            @keypress="handleEnter"
-          />
+          <NAutoComplete v-model:value="prompt" :options="searchOptions" :render-label="renderOption">
+            <template #default="{ handleInput, handleBlur, handleFocus }">
+              <NInput
+                v-model:value="prompt" type="textarea" :placeholder="placeholder"
+                :autosize="{ minRows: 1, maxRows: 2 }" @input="handleInput" @focus="handleFocus" @blur="handleBlur" @keypress="handleEnter"
+              />
+            </template>
+          </NAutoComplete>
           <NButton type="primary" :disabled="buttonDisabled" @click="handleSubmit">
             <template #icon>
               <span class="dark:text-black">

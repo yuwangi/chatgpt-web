@@ -1,8 +1,7 @@
 <script setup lang='ts'>
 import { onMounted, ref } from 'vue'
-import { NSpin } from 'naive-ui'
+import { NImage, NSpin } from 'naive-ui'
 import { fetchChatConfig } from '@/api'
-import pkg from '@/../package.json'
 
 interface ConfigState {
   timeoutMs?: number
@@ -34,29 +33,34 @@ onMounted(() => {
 <template>
   <NSpin :show="loading">
     <div class="p-4 space-y-4">
-      <h2 class="text-xl font-bold">
-        Version - {{ pkg.version }}
-      </h2>
-      <!-- <div class="p-2 space-y-2 rounded-md bg-neutral-100 dark:bg-neutral-700">
-        <p>
-          此项目开源于
-          <a
-            class="text-blue-600 dark:text-blue-500"
-            href="https://github.com/Chanzhaoyu/chatgpt-web"
-            target="_blank"
-          >
-            Github
-          </a>
-          ，免费且基于 MIT 协议，没有任何形式的付费行为！
-        </p>
-        <p>
-          如果你觉得此项目对你有帮助，请在 Github 帮我点个 Star 或者给予一点赞助，谢谢！
-        </p>
-      </div> -->
-      <p>{{ $t("setting.api") }}：{{ config?.apiModel ?? '-' }}</p>
+      <div class="p-2 space-y-2 flex items-center justify-center dark:bg-neutral-700">
+        <!-- <NImageGroup> -->
+        <!-- <NSpace> -->
+        <div>
+          <div class="font-bold text-md mb-3">
+            微信交流群
+          </div>
+          <NImage
+            width="300"
+            src="http://101.200.160.219:8888/down/W8wso5BddSJb"
+          />
+        </div>
+        <div class="ml-8">
+          <div class="font-bold text-md mb-3">
+            作者
+          </div>
+          <NImage
+            width="300"
+            src="http://101.200.160.219:8888/down/yCWy3hhvhrgM"
+          />
+        </div>
+        <!-- </NSpace> -->
+        <!-- </NImageGroup> -->
+      </div>
+      <!-- <p>{{ $t("setting.api") }}：{{ config?.apiModel ?? '-' }}</p>
       <p>{{ $t("setting.reverseProxy") }}：{{ config?.reverseProxy ?? '-' }}</p>
       <p>{{ $t("setting.timeout") }}：{{ config?.timeoutMs ?? '-' }}</p>
-      <p>{{ $t("setting.socks") }}：{{ config?.socksProxy ?? '-' }}</p>
+      <p>{{ $t("setting.socks") }}：{{ config?.socksProxy ?? '-' }}</p> -->
     </div>
   </NSpin>
 </template>

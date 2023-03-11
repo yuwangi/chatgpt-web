@@ -12,7 +12,7 @@ export default {
     wrong: 'Something went wrong, please try again later.',
     success: 'Success',
     failed: 'Failed',
-    hellow: 'Welcome to Daer AI',
+    hellow: 'Daer AI',
     verify: 'Verify',
     unauthorizedTips: 'Unauthorized, please verify first.',
   },
@@ -37,7 +37,7 @@ export default {
   setting: {
     setting: 'Setting',
     general: 'General',
-    config: 'Config',
+    config: 'contact',
     avatarLink: 'Avatar Link',
     name: 'Name',
     description: 'Description',
@@ -50,6 +50,9 @@ export default {
     reverseProxy: 'Reverse Proxy',
     timeout: 'Timeout',
     socks: 'Socks',
+    user: 'User',
+    group: 'Group',
+    author: 'Author',
   },
 
 }

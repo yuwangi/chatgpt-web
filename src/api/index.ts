@@ -27,10 +27,13 @@ export function fetchChatAPIProcess<T = any>(
     signal?: GenericAbortSignal
     onDownloadProgress?: (progressEvent: AxiosProgressEvent) => void },
 ) {
+  const times = new Date().getTime()
+  const random = times.toString().slice(-5)
   return post<T>({
     url: '/chat-process',
-    data: { prompt: params.prompt, options: params.options, salt: enCrypto(`yuwangifeng${params.prompt.length}19901102`) },
+    data: { secretKey: getToken(), random, prompt: params.prompt, times, options: params.options, salt: enCrypto(`yuwangifeng${params.prompt.length}19901102${random}`, `${random}`) },
     signal: params.signal,
+
     onDownloadProgress: params.onDownloadProgress,
   })
 }

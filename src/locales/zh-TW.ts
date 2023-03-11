@@ -34,7 +34,7 @@ export default {
   setting: {
     setting: '設定',
     general: '總覽',
-    config: '設定',
+    config: '联系',
     avatarLink: '頭貼連結',
     name: '名稱',
     description: '描述',
@@ -47,5 +47,8 @@ export default {
     reverseProxy: '反向代理',
     timeout: '逾時',
     socks: 'Socks',
+    user: '用戶',
+    group: '群組',
+    author: '作者',
   },
 }
