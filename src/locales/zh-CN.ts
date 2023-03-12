@@ -14,7 +14,7 @@ export default {
     failed: '操作失败',
     hellow: '达尔AI',
     verify: '验证',
-    unauthorizedTips: '未经授权，请先进行验证。',
+    unauthorizedTips: '未经授权，请先进行验证。请联系管理员微信：yuwangifeng',
   },
   chat: {
     placeholder: '来说点什么吧...（Shift + Enter = 换行）',
@@ -28,6 +28,9 @@ export default {
     exportImageConfirm: '是否将会话保存为图片?',
     exportSuccess: '保存成功',
     exportFailed: '保存失败',
+    usingContext: '上下文模式',
+    turnOnContext: '当前模式下, 发送消息会携带之前的聊天记录',
+    turnOffContext: '当前模式下, 发送消息不会携带之前的聊天记录',
     deleteMessage: '删除消息',
     deleteMessageConfirm: '是否删除此消息?',
     deleteHistoryConfirm: '确定删除此记录?',

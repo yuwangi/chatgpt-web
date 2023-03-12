@@ -1,7 +1,6 @@
 <script setup lang='ts'>
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
-// import { NButton, NInput, useDialog, useMessage } from 'naive-ui'
 import { storeToRefs } from 'pinia'
 import { NAutoComplete, NButton, NInput, useDialog, useMessage } from 'naive-ui'
 import html2canvas from 'html2canvas'
@@ -9,6 +8,8 @@ import { Message } from './components'
 import { useScroll } from './hooks/useScroll'
 import { useChat } from './hooks/useChat'
 import { useCopyCode } from './hooks/useCopyCode'
+import { useUsingContext } from './hooks/useUsingContext'
+import HeaderComponent from './components/Header/index.vue'
 import { HoverButton, SvgIcon } from '@/components/common'
 import { useBasicLayout } from '@/hooks/useBasicLayout'
 import { useChatStore, usePromptStore } from '@/store'
@@ -17,6 +18,8 @@ import { t } from '@/locales'
 
 let controller = new AbortController()
 
+const openLongReply = import.meta.env.VITE_GLOB_OPEN_LONG_REPLY === 'true'
+
 const route = useRoute()
 const dialog = useDialog()
 const ms = useMessage()
@@ -24,16 +27,19 @@ const ms = useMessage()
 const chatStore = useChatStore()
 
 useCopyCode()
+
 const { isMobile } = useBasicLayout()
 const { addChat, updateChat, updateChatSome, getChatByUuidAndIndex } = useChat()
 const { scrollRef, scrollToBottom } = useScroll()
+const { usingContext, toggleUsingContext } = useUsingContext()
 
 const { uuid } = route.params as { uuid: string }
+console.log('uuid', uuid)
 
 const dataSources = computed(() => chatStore.getChatByUuid(+uuid))
 const conversationList = computed(() => dataSources.value.filter(item => (!item.inversion && !item.error)))
 
-console.log('conversationList', conversationList.value)
+// console.log('conversationList', conversationList.value)
 
 const prompt = ref<string>('')
 const loading = ref<boolean>(false)
@@ -48,7 +54,7 @@ function handleSubmit() {
 }
 
 async function onConversation() {
-  const message = prompt.value
+  let message = prompt.value
   let costTotal = 0
   if (loading.value)
     return
@@ -76,9 +82,10 @@ async function onConversation() {
   prompt.value = ''
 
   let options: Chat.ConversationRequest = {}
+  const lastContact = conversationList.value[conversationList.value.length - 1]?.text || ''
   const lastContext = conversationList.value[conversationList.value.length - 1]?.conversationOptions
-
-  if (lastContext)
+  // console.log('lastContext_____________', lastContact)
+  if (lastContext && usingContext.value)
     options = { ...lastContext }
 
   addChat(
@@ -97,50 +104,58 @@ async function onConversation() {
   scrollToBottom()
 
   try {
-    await fetchChatAPIProcess<Chat.ConversationResponse>({
-      prompt: message,
-      options,
-      signal: controller.signal,
+    let lastText = ''
+    const fetchChatAPIOnce = async () => {
+      await fetchChatAPIProcess<Chat.ConversationResponse>({
+        prompt: message,
+        options,
+        signal: controller.signal,
+        onDownloadProgress: ({ event }) => {
+          const xhr = event.target
+          const { responseText } = xhr
+          // Always process the final line
+          const lastIndex = responseText.lastIndexOf('\n')
+          let chunk = responseText
+          if (lastIndex !== -1)
+            chunk = responseText.substring(lastIndex)
+          try {
+            const data = JSON.parse(chunk)
+            const length: number = lastContact.length + message.length + (data.text || '').length
 
-      onDownloadProgress: ({ event }) => {
-        const xhr = event.target
-        const { responseText } = xhr
-        // Always process the final line
-        const lastIndex = responseText.lastIndexOf('\n')
-        let chunk = responseText
-        if (lastIndex !== -1)
-          chunk = responseText.substring(lastIndex)
-        try {
-          const data = JSON.parse(chunk)
-          // debugger
-          const length: number = message.length + (data.text || '').length
+            const cost = Number(Number(length * 1 * 10 * 0.000014).toFixed(6))
 
-          const cost = Number(Number(length * 1 * 10 * 0.000014).toFixed(6))
+            costTotal = cost
+            updateChat(
+              +uuid,
+              dataSources.value.length - 1,
+              {
+                dateTime: new Date().toLocaleString(),
+                text: lastText + data.text ?? '',
+                inversion: false,
+                error: false,
+                loading: false,
+                conversationOptions: { conversationId: data.conversationId, parentMessageId: data.id },
+                requestOptions: { prompt: message, options: { ...options } },
+              },
+            )
 
-          costTotal = cost
-          // console.log('===========', data.text, cost)
-          // const text = `${data.text || ''} \n\n> 花费: ${cost}￥`
-          updateChat(
-            +uuid,
-            dataSources.value.length - 1,
-            {
-              dateTime: new Date().toLocaleString(),
-              text: data.text,
-              inversion: false,
-              error: false,
-              cost,
-              loading: false,
-              conversationOptions: { conversationId: data.conversationId, parentMessageId: data.id },
-              requestOptions: { prompt: message, options: { ...options } },
-            },
-          )
-        }
-        catch (error) {
+            if (openLongReply && data.detail.choices[0].finish_reason === 'length') {
+              options.parentMessageId = data.id
+              lastText = data.text
+              message = ''
+              return fetchChatAPIOnce()
+            }
+
+            scrollToBottom()
+          }
+          catch (error) {
           //
-        }
-      },
-    })
-    scrollToBottom()
+          }
+        },
+      })
+    }
+
+    await fetchChatAPIOnce()
   }
   catch (error: any) {
     console.error(error?.message)
@@ -198,9 +213,9 @@ async function onConversation() {
     if (costTotal) {
       deduction({ balance: costTotal }).then((res) => {
         console.error('res', res.data)
-        if (!res.data) {
+        // if (!res.data) {
 
-        }
+        // }
       }).catch((err) => {
         console.error('err', err)
       })
@@ -215,8 +230,9 @@ async function onRegenerate(index: number) {
   controller = new AbortController()
 
   const { requestOptions } = dataSources.value[index]
+  console.log('dataSources.value[index]', dataSources.value[index])
 
-  const message = requestOptions?.prompt ?? ''
+  let message = requestOptions?.prompt ?? ''
 
   let options: Chat.ConversationRequest = {}
 
@@ -241,46 +257,55 @@ async function onRegenerate(index: number) {
   )
 
   try {
-    await fetchChatAPIProcess<Chat.ConversationResponse>({
-      prompt: message,
-      options,
-      signal: controller.signal,
-      onDownloadProgress: ({ event }) => {
-        const xhr = event.target
-        const { responseText } = xhr
-        // Always process the final line
-        const lastIndex = responseText.lastIndexOf('\n')
-        let chunk = responseText
-        if (lastIndex !== -1)
-          chunk = responseText.substring(lastIndex)
-        try {
-          const data = JSON.parse(chunk)
-          const length: number = message.length + (data.text || '').length
+    let lastText = ''
+    const fetchChatAPIOnce = async () => {
+      await fetchChatAPIProcess<Chat.ConversationResponse>({
+        prompt: message,
+        options,
+        signal: controller.signal,
+        onDownloadProgress: ({ event }) => {
+          const xhr = event.target
+          const { responseText } = xhr
+          // Always process the final line
+          const lastIndex = responseText.lastIndexOf('\n')
+          let chunk = responseText
+          if (lastIndex !== -1)
+            chunk = responseText.substring(lastIndex)
+          try {
+            const data = JSON.parse(chunk)
+            const length: number = lastText.length + message.length + (data.text || '').length
 
-          const cost = Number(Number(length * 1 * 10 * 0.000014).toFixed(6))
-          costTotal = cost
-          // console.error('===========', data.text, cost)
-          // const text = `${data.text || ''} \n\n> 花费: ${cost}￥`
-          updateChat(
-            +uuid,
-            index,
-            {
-              dateTime: new Date().toLocaleString(),
-              text: data.text,
-              cost: cost || 0,
-              inversion: false,
-              error: false,
-              loading: false,
-              conversationOptions: { conversationId: data.conversationId, parentMessageId: data.id },
-              requestOptions: { prompt: message, ...options },
-            },
-          )
-        }
-        catch (error) {
-          //
-        }
-      },
-    })
+            const cost = Number(Number(length * 1 * 10 * 0.000014).toFixed(6))
+            costTotal = cost
+            updateChat(
+              +uuid,
+              index,
+              {
+                dateTime: new Date().toLocaleString(),
+                text: lastText + data.text ?? '',
+                cost: cost || 0,
+                inversion: false,
+                error: false,
+                loading: false,
+                conversationOptions: { conversationId: data.conversationId, parentMessageId: data.id },
+                requestOptions: { prompt: message, ...options },
+              },
+            )
+
+            if (openLongReply && data.detail.choices[0].finish_reason === 'length') {
+              options.parentMessageId = data.id
+              lastText = data.text
+              message = ''
+              return fetchChatAPIOnce()
+            }
+          }
+          catch (error) {
+            //
+          }
+        },
+      })
+    }
+    await fetchChatAPIOnce()
   }
   catch (error: any) {
     if (error.message === 'canceled') {
@@ -328,27 +353,27 @@ async function onRegenerate(index: number) {
 // 可优化部分
 // 搜索选项计算，这里使用value作为索引项，所以当出现重复value时渲染异常(多项同时出现选中效果)
 // 理想状态下其实应该是key作为索引项,但官方的renderOption会出现问题，所以就需要value反renderLabel实现
-const searchOptions = computed(() => {
-  if (prompt.value.startsWith('/')) {
-    return promptTemplate.value.filter((item: { key: string }) => item.key.toLowerCase().includes(prompt.value.substring(1).toLowerCase())).map((obj: { value: any }) => {
-      return {
-        label: obj.value,
-        value: obj.value,
-      }
-    })
-  }
-  else {
-    return []
-  }
-})
+// const searchOptions = computed(() => {
+//   if (prompt.value.startsWith('/')) {
+//     return promptTemplate.value.filter((item: { key: string }) => item.key.toLowerCase().includes(prompt.value.substring(1).toLowerCase())).map((obj: { value: any }) => {
+//       return {
+//         label: obj.value,
+//         value: obj.value,
+//       }
+//     })
+//   }
+//   else {
+//     return []
+//   }
+// })
 // value反渲染key
-const renderOption = (option: { label: string }) => {
-  for (const i of promptTemplate.value) {
-    if (i.value === option.label)
-      return [i.key]
-  }
-  return []
-}
+// const renderOption = (option: { label: string }) => {
+//   for (const i of promptTemplate.value) {
+//     if (i.value === option.label)
+//       return [i.key]
+//   }
+//   return []
+// }
 
 function handleExport() {
   if (loading.value)
@@ -363,7 +388,9 @@ function handleExport() {
       try {
         d.loading = true
         const ele = document.getElementById('image-wrapper')
-        const canvas = await html2canvas(ele as HTMLDivElement)
+        const canvas = await html2canvas(ele as HTMLDivElement, {
+          useCORS: true,
+        })
         const imgUrl = canvas.toDataURL('image/png')
         const tempLink = document.createElement('a')
         tempLink.style.display = 'none'
@@ -442,6 +469,31 @@ function handleStop() {
   }
 }
 
+// 可优化部分
+// 搜索选项计算，这里使用value作为索引项，所以当出现重复value时渲染异常(多项同时出现选中效果)
+// 理想状态下其实应该是key作为索引项,但官方的renderOption会出现问题，所以就需要value反renderLabel实现
+const searchOptions = computed(() => {
+  if (prompt.value.startsWith('/')) {
+    return promptTemplate.value.filter((item: { key: string }) => item.key.toLowerCase().includes(prompt.value.substring(1).toLowerCase())).map((obj: { value: any }) => {
+      return {
+        label: obj.value,
+        value: obj.value,
+      }
+    })
+  }
+  else {
+    return []
+  }
+})
+// value反渲染key
+const renderOption = (option: { label: string }) => {
+  for (const i of promptTemplate.value) {
+    if (i.value === option.label)
+      return [i.key]
+  }
+  return []
+}
+
 const placeholder = computed(() => {
   if (isMobile.value)
     return t('chat.placeholderMobile')
@@ -452,16 +504,10 @@ const buttonDisabled = computed(() => {
   return loading.value || !prompt.value || prompt.value.trim() === ''
 })
 
-const wrapClass = computed(() => {
-  if (isMobile.value)
-    return ['pt-14']
-  return []
-})
-
 const footerClass = computed(() => {
   let classes = ['p-4']
   if (isMobile.value)
-    classes = ['sticky', 'left-0', 'bottom-0', 'right-0', 'p-2', 'pr-4', 'overflow-hidden']
+    classes = ['sticky', 'left-0', 'bottom-0', 'right-0', 'p-2', 'pr-3', 'overflow-hidden']
   return classes
 })
 
@@ -476,14 +522,24 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="flex flex-col w-full h-full" :class="wrapClass">
+  <div class="flex flex-col w-full h-full">
+    <HeaderComponent
+      v-if="isMobile"
+      :using-context="usingContext"
+      @export="handleExport"
+      @toggle-using-context="toggleUsingContext"
+    />
     <main class="flex-1 overflow-hidden">
       <div
         id="scrollRef"
         ref="scrollRef"
         class="h-full overflow-hidden overflow-y-auto"
       >
-        <div id="image-wrapper" class="w-full max-w-screen-xl m-auto" :class="[isMobile ? 'p-2' : 'p-4']">
+        <div
+          id="image-wrapper"
+          class="w-full max-w-screen-xl m-auto dark:bg-[#101014]"
+          :class="[isMobile ? 'p-2' : 'p-4']"
+        >
           <template v-if="!dataSources.length">
             <!-- <div class="flex items-center justify-center mt-4 text-center text-neutral-300">
               <SvgIcon icon="ri:bubble-chart-fill" class="mr-2 text-3xl" />
@@ -492,8 +548,9 @@ onUnmounted(() => {
             <div class="flex flex-col items-center text-sm h-full ">
               <div class="text-gray-800 w-full md:max-w-2xl lg:max-w-3xl md:h-full md:flex md:flex-col px-6 dark:text-gray-100">
                 <h1 class="text-4xl font-semibold mt-10 ml-auto mr-auto mb-16">
-                  {{ $t('common.hellow') }}-ChatGPT
-                </h1><div class="flex items-start text-center gap-3.5">
+                  {{ $t('common.hellow') }} - ChatGPT
+                </h1>
+                <div class="flex items-start text-center gap-3.5">
                   <div class="flex flex-col gap-3.5 flex-1">
                     <svg stroke="currentColor" fill="none" stroke-width="1.5" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 m-auto" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="5" /><line x1="12" y1="1" x2="12" y2="3" /><line x1="12" y1="21" x2="12" y2="23" /><line x1="4.22" y1="4.22" x2="5.64" y2="5.64" /><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" /><line x1="1" y1="12" x2="3" y2="12" /><line x1="21" y1="12" x2="23" y2="12" /><line x1="4.22" y1="19.78" x2="5.64" y2="18.36" /><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" /></svg><h2 class="text-lg font-normal">
                       Examples
@@ -570,16 +627,27 @@ onUnmounted(() => {
               <SvgIcon icon="ri:delete-bin-line" />
             </span>
           </HoverButton>
-          <HoverButton @click="handleExport">
+          <HoverButton v-if="!isMobile" @click="handleExport">
             <span class="text-xl text-[#4f555e] dark:text-white">
               <SvgIcon icon="ri:download-2-line" />
+            </span>
+          </HoverButton>
+          <HoverButton v-if="!isMobile" @click="toggleUsingContext">
+            <span class="text-xl" :class="{ 'text-[#4b9e5f]': usingContext, 'text-[#a8071a]': !usingContext }">
+              <SvgIcon icon="ri:chat-history-line" />
             </span>
           </HoverButton>
           <NAutoComplete v-model:value="prompt" :options="searchOptions" :render-label="renderOption">
             <template #default="{ handleInput, handleBlur, handleFocus }">
               <NInput
-                v-model:value="prompt" type="textarea" :placeholder="placeholder"
-                :autosize="{ minRows: 1, maxRows: 2 }" @input="handleInput" @focus="handleFocus" @blur="handleBlur" @keypress="handleEnter"
+                v-model:value="prompt"
+                type="textarea"
+                :placeholder="placeholder"
+                :autosize="{ minRows: 1, maxRows: 2 }"
+                @input="handleInput"
+                @focus="handleFocus"
+                @blur="handleBlur"
+                @keypress="handleEnter"
               />
             </template>
           </NAutoComplete>

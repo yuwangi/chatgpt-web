@@ -13,7 +13,7 @@ export default {
     success: '操作成功',
     failed: '操作失敗',
     verify: '驗證',
-    unauthorizedTips: '未經授權，請先進行驗證。',
+    unauthorizedTips: '未經授權，請先進行驗證。請聯繫管理員微信：yuwangifeng',
   },
   chat: {
     placeholder: '來說點什麼...（Shift + Enter = 換行）',
@@ -27,6 +27,9 @@ export default {
     exportImageConfirm: '是否將對話儲存為圖片?',
     exportSuccess: '儲存成功',
     exportFailed: '儲存失敗',
+    usingContext: '上下文模式',
+    turnOnContext: '啟用上下文模式，在此模式下，發送訊息會包含之前的聊天記錄。',
+    turnOffContext: '關閉上下文模式，在此模式下，發送訊息不會包含之前的聊天記錄。',
     deleteMessage: '刪除訊息',
     deleteMessageConfirm: '是否刪除此訊息?',
     deleteHistoryConfirm: '確定刪除此紀錄?',
