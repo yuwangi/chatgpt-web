@@ -42,7 +42,7 @@ onMounted(() => {
           </div>
           <NImage
             width="300"
-            src="http://101.200.160.219:8888/down/W8wso5BddSJb"
+            src="https://yuwangi-1308727407.cos.ap-chengdu.myqcloud.com/qun-liao-p1.jpg"
           />
         </div>
         <div class="ml-8">
@@ -51,7 +51,7 @@ onMounted(() => {
           </div>
           <NImage
             width="300"
-            src="http://101.200.160.219:8888/down/yCWy3hhvhrgM"
+            src="https://yuwangi-1308727407.cos.ap-chengdu.myqcloud.com/wechat.jpg"
           />
         </div>
         <!-- </NSpace> -->
