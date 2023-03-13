@@ -33,7 +33,7 @@ onMounted(() => {
 <template>
   <NSpin :show="loading">
     <div class="p-4 space-y-4">
-      <div class="p-2 space-y-2 flex items-center justify-center dark:bg-neutral-700">
+      <div class="p-2 space-y-2 flex items-center justify-center">
         <!-- <NImageGroup> -->
         <!-- <NSpace> -->
         <div>
@@ -47,7 +47,7 @@ onMounted(() => {
         </div>
         <div class="ml-8">
           <div class="font-bold text-md mb-3">
-            作者
+            商务合作
           </div>
           <NImage
             width="300"

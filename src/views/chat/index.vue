@@ -34,7 +34,7 @@ const { scrollRef, scrollToBottom } = useScroll()
 const { usingContext, toggleUsingContext } = useUsingContext()
 
 const { uuid } = route.params as { uuid: string }
-console.log('uuid', uuid)
+// console.log('uuid', uuid)
 
 const dataSources = computed(() => chatStore.getChatByUuid(+uuid))
 const conversationList = computed(() => dataSources.value.filter(item => (!item.inversion && !item.error)))
@@ -230,7 +230,7 @@ async function onRegenerate(index: number) {
   controller = new AbortController()
 
   const { requestOptions } = dataSources.value[index]
-  console.log('dataSources.value[index]', dataSources.value[index])
+  // console.log('dataSources.value[index]', dataSources.value[index])
 
   let message = requestOptions?.prompt ?? ''
 
