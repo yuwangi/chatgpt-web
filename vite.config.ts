@@ -36,6 +36,11 @@ export default defineConfig((env) => {
           changeOrigin: true, // 允许跨域
           rewrite: path => path.replace('/chat-web-api/', '/'),
         },
+        '/chat-bing-api': {
+          target: 'http://146.56.142.221:3002',
+          changeOrigin: true, // 允许跨域
+          rewrite: path => path.replace('/chat-bing-api/', '/'),
+        },
       },
     },
     build: {

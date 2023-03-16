@@ -9,6 +9,10 @@ let curIP = ''
 
 service.interceptors.request.use(
   (config) => {
+    console.log('config', config)
+    if (config?.url?.includes('chat-bing-api'))
+      config.baseURL = ''
+
     getUserIP((ip) => {
       curIP = ip
     })

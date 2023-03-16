@@ -38,6 +38,24 @@ export function fetchChatAPIProcess<T = any>(
   })
 }
 
+export function fetchBingAPIProcess<T = any>(
+  params: {
+    prompt: string
+    options?: { jailbreakConversationId?: string; parentMessageId?: string }
+    signal?: GenericAbortSignal
+    onDownloadProgress?: (progressEvent: AxiosProgressEvent) => void },
+) {
+  const times = new Date().getTime()
+  const random = times.toString().slice(-5)
+  return post<T>({
+    url: '/chat-bing-api/bing-process',
+    data: { secretKey: getToken(), random, prompt: params.prompt, times, options: params.options, salt: enCrypto(`yuwangifeng${params.prompt.length}19901102${random}`, `${random}`) },
+    signal: params.signal,
+
+    onDownloadProgress: params.onDownloadProgress,
+  })
+}
+
 export function fetchVerify<T = any>(token: string) {
   return post<T>({
     url: '/verify',

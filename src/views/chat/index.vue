@@ -2,7 +2,7 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { storeToRefs } from 'pinia'
-import { NAutoComplete, NButton, NInput, useDialog, useMessage } from 'naive-ui'
+import { NAutoComplete, NButton, NInput, NInputGroup, NSelect, useDialog, useMessage } from 'naive-ui'
 import html2canvas from 'html2canvas'
 import { Message } from './components'
 import { useScroll } from './hooks/useScroll'
@@ -13,7 +13,7 @@ import HeaderComponent from './components/Header/index.vue'
 import { HoverButton, SvgIcon } from '@/components/common'
 import { useBasicLayout } from '@/hooks/useBasicLayout'
 import { useChatStore, usePromptStore } from '@/store'
-import { deduction, fetchChatAPIProcess } from '@/api'
+import { deduction, fetchBingAPIProcess, fetchChatAPIProcess } from '@/api'
 import { t } from '@/locales'
 
 let controller = new AbortController()
@@ -43,6 +43,17 @@ const conversationList = computed(() => dataSources.value.filter(item => (!item.
 
 const prompt = ref<string>('')
 const loading = ref<boolean>(false)
+const searchType = ref<string>('ChatGPT')
+const selectOptions = ref([
+  {
+    label: 'ChatGPT',
+    value: 'ChatGPT',
+  },
+  {
+    label: 'Bing',
+    value: 'bing',
+  },
+])
 
 // 添加PromptStore
 const promptStore = usePromptStore()
@@ -84,9 +95,19 @@ async function onConversation() {
   let options: Chat.ConversationRequest = {}
   const lastContact = conversationList.value[conversationList.value.length - 1]?.text || ''
   const lastContext = conversationList.value[conversationList.value.length - 1]?.conversationOptions
-  // console.log('lastContext_____________', lastContact)
+  console.log('lastContext_____________', lastContact)
   if (lastContext && usingContext.value)
     options = { ...lastContext }
+
+  const type = searchType.value
+  if (options?.fromTo === 'bing') {
+    if (type === 'ChatGPT')
+      options = {}
+  }
+  else {
+    if (type === 'bing')
+      options = {}
+  }
 
   addChat(
     +uuid,
@@ -106,53 +127,118 @@ async function onConversation() {
   try {
     let lastText = ''
     const fetchChatAPIOnce = async () => {
-      await fetchChatAPIProcess<Chat.ConversationResponse>({
-        prompt: message,
-        options,
-        signal: controller.signal,
-        onDownloadProgress: ({ event }) => {
-          const xhr = event.target
-          const { responseText } = xhr
-          // Always process the final line
-          const lastIndex = responseText.lastIndexOf('\n')
-          let chunk = responseText
-          if (lastIndex !== -1)
-            chunk = responseText.substring(lastIndex)
-          try {
-            const data = JSON.parse(chunk)
-            const length: number = lastContact.length + message.length + (data.text || '').length
+      if (searchType.value === 'ChatGPT') {
+        await fetchChatAPIProcess<Chat.ConversationResponse>({
+          prompt: message,
+          options,
+          signal: controller.signal,
+          onDownloadProgress: ({ event }) => {
+            const xhr = event.target
+            const { responseText } = xhr
+            // Always process the final line
+            const lastIndex = responseText.lastIndexOf('\n')
+            let chunk = responseText
+            if (lastIndex !== -1)
+              chunk = responseText.substring(lastIndex)
+            try {
+              const data = JSON.parse(chunk)
+              // lastContact.length +
+              const length: number = message.length + (data.text || '').length
 
-            const cost = Number(Number(length * 1 * 10 * 0.000014).toFixed(6))
+              const cost = Number(Number(length * 1 * 10 * 0.000014).toFixed(6))
 
-            costTotal = cost
-            updateChat(
-              +uuid,
-              dataSources.value.length - 1,
-              {
-                dateTime: new Date().toLocaleString(),
-                text: lastText + data.text ?? '',
-                inversion: false,
-                error: false,
-                loading: false,
-                conversationOptions: { conversationId: data.conversationId, parentMessageId: data.id },
-                requestOptions: { prompt: message, options: { ...options } },
-              },
-            )
+              costTotal = cost
+              updateChat(
+                +uuid,
+                dataSources.value.length - 1,
+                {
+                  dateTime: new Date().toLocaleString(),
+                  text: lastText + data.text ?? '',
+                  inversion: false,
+                  error: false,
+                  loading: false,
+                  conversationOptions: { conversationId: data.conversationId, parentMessageId: data.id },
+                  requestOptions: { prompt: message, options: { ...options } },
+                },
+              )
 
-            if (openLongReply && data.detail.choices[0].finish_reason === 'length') {
-              options.parentMessageId = data.id
-              lastText = data.text
-              message = ''
-              return fetchChatAPIOnce()
+              if (openLongReply && data.detail.choices[0].finish_reason === 'length') {
+                options.parentMessageId = data.id
+                lastText = data.text
+                message = ''
+                return fetchChatAPIOnce()
+              }
+
+              scrollToBottom()
             }
+            catch (error) {
+              //
+            }
+          },
+        })
+      }
+      else {
+        await fetchBingAPIProcess({
+          prompt: message,
+          options,
+          signal: controller.signal,
+          onDownloadProgress: ({ event }) => {
+            const xhr = event.target
+            const { responseText } = xhr
+            console.log('responseText----------', responseText)
+            // Always process the final line
+            const lastIndex = responseText.lastIndexOf('\n')
+            let chunk = responseText
+            if (lastIndex !== -1)
+              chunk = responseText.substring(lastIndex)
+            try {
+              const data = JSON.parse(chunk)
+              // const length: number = lastContact.length + message.length + (data.text || '').length
+              let text = lastText + data.text ?? ''
 
-            scrollToBottom()
-          }
-          catch (error) {
-          //
-          }
-        },
-      })
+              console.log('bingData>>>>>>>>>', data)
+              if (data.conversationId) {
+                const list = data.details.sourceAttributions || []
+                if (list && list.length > 0)
+                  text += '\n\n\n ##### 了解详细信息:\n\n'
+
+                list.forEach((element: any, index: number) => {
+                  text += `${(index + 1)}.[${element.providerDisplayName}](${element.seeMoreUrl})\n`
+                })
+              }
+
+              const cost = 0
+
+              costTotal = cost
+              updateChat(
+                +uuid,
+                dataSources.value.length - 1,
+                {
+                  dateTime: new Date().toLocaleString(),
+                  text,
+                  inversion: false,
+                  error: false,
+                  loading: false,
+                  conversationOptions: { parentMessageId: data?.messageId, jailbreakConversationId: data?.jailbreakConversationId, fromTo: 'bing' },
+                  requestOptions: { prompt: message, options: { ...options } },
+                },
+              )
+
+              if (openLongReply && data.detail.choices[0].finish_reason === 'length') {
+                options.parentMessageId = data.id
+                lastText = data.text
+                message = ''
+                return fetchChatAPIOnce()
+              }
+
+              scrollToBottom()
+            }
+            catch (error) {
+              //
+            }
+          },
+        })
+      }
     }
 
     await fetchChatAPIOnce()
@@ -230,7 +316,7 @@ async function onRegenerate(index: number) {
   controller = new AbortController()
 
   const { requestOptions } = dataSources.value[index]
-  // console.log('dataSources.value[index]', dataSources.value[index])
+  console.log('dataSources.value[index]', dataSources.value[index])
 
   let message = requestOptions?.prompt ?? ''
 
@@ -238,6 +324,16 @@ async function onRegenerate(index: number) {
 
   if (requestOptions.options)
     options = { ...requestOptions.options }
+
+  const type = searchType.value
+  if (options?.fromTo === 'bing') {
+    if (type === 'ChatGPT')
+      options = {}
+  }
+  else {
+    if (type === 'bing')
+      options = {}
+  }
 
   loading.value = true
 
@@ -259,51 +355,111 @@ async function onRegenerate(index: number) {
   try {
     let lastText = ''
     const fetchChatAPIOnce = async () => {
-      await fetchChatAPIProcess<Chat.ConversationResponse>({
-        prompt: message,
-        options,
-        signal: controller.signal,
-        onDownloadProgress: ({ event }) => {
-          const xhr = event.target
-          const { responseText } = xhr
-          // Always process the final line
-          const lastIndex = responseText.lastIndexOf('\n')
-          let chunk = responseText
-          if (lastIndex !== -1)
-            chunk = responseText.substring(lastIndex)
-          try {
-            const data = JSON.parse(chunk)
-            const length: number = lastText.length + message.length + (data.text || '').length
+      if (searchType.value === 'ChatGPT') {
+        await fetchChatAPIProcess<Chat.ConversationResponse>({
+          prompt: message,
+          options,
+          signal: controller.signal,
+          onDownloadProgress: ({ event }) => {
+            const xhr = event.target
+            const { responseText } = xhr
+            // Always process the final line
+            const lastIndex = responseText.lastIndexOf('\n')
+            let chunk = responseText
+            if (lastIndex !== -1)
+              chunk = responseText.substring(lastIndex)
+            try {
+              const data = JSON.parse(chunk)
+              // lastContact.length +
+              const length: number = message.length + (data.text || '').length
 
-            const cost = Number(Number(length * 1 * 10 * 0.000014).toFixed(6))
-            costTotal = cost
-            updateChat(
-              +uuid,
-              index,
-              {
-                dateTime: new Date().toLocaleString(),
-                text: lastText + data.text ?? '',
-                cost: cost || 0,
-                inversion: false,
-                error: false,
-                loading: false,
-                conversationOptions: { conversationId: data.conversationId, parentMessageId: data.id },
-                requestOptions: { prompt: message, ...options },
-              },
-            )
+              const cost = Number(Number(length * 1 * 10 * 0.000014).toFixed(6))
+              costTotal = cost
+              updateChat(
+                +uuid,
+                index,
+                {
+                  dateTime: new Date().toLocaleString(),
+                  text: lastText + data.text ?? '',
+                  cost: cost || 0,
+                  inversion: false,
+                  error: false,
+                  loading: false,
+                  conversationOptions: { conversationId: data.conversationId, parentMessageId: data.id },
+                  requestOptions: { prompt: message, ...options },
+                },
+              )
 
-            if (openLongReply && data.detail.choices[0].finish_reason === 'length') {
-              options.parentMessageId = data.id
-              lastText = data.text
-              message = ''
-              return fetchChatAPIOnce()
+              if (openLongReply && data.detail.choices[0].finish_reason === 'length') {
+                options.parentMessageId = data.id
+                lastText = data.text
+                message = ''
+                return fetchChatAPIOnce()
+              }
             }
-          }
-          catch (error) {
+            catch (error) {
             //
-          }
-        },
-      })
+            }
+          },
+        })
+      }
+      else {
+        await fetchBingAPIProcess({
+          prompt: message,
+          options,
+          signal: controller.signal,
+          onDownloadProgress: ({ event }) => {
+            const xhr = event.target
+            const { responseText } = xhr
+            // Always process the final line
+            const lastIndex = responseText.lastIndexOf('\n')
+            let chunk = responseText
+            if (lastIndex !== -1)
+              chunk = responseText.substring(lastIndex)
+            try {
+              const data = JSON.parse(chunk)
+              let text = lastText + data.text ?? ''
+
+              console.log('bingData>>>>>>>>>', data)
+              if (data.conversationId) {
+                const list = data.details.sourceAttributions || []
+                if (list && list.length > 0)
+                  text += '\n\n\n ##### 了解详细信息:\n\n'
+
+                list.forEach((element: any, index: number) => {
+                  text += `${(index + 1)}.[${element.providerDisplayName}](${element.seeMoreUrl})\n`
+                })
+              }
+              const cost = 0
+              costTotal = cost
+              updateChat(
+                +uuid,
+                index,
+                {
+                  dateTime: new Date().toLocaleString(),
+                  text,
+                  cost: cost || 0,
+                  inversion: false,
+                  error: false,
+                  loading: false,
+                  conversationOptions: { parentMessageId: data?.messageId, jailbreakConversationId: data?.jailbreakConversationId, fromTo: 'bing' },
+                  requestOptions: { prompt: message, ...options },
+                },
+              )
+
+              if (openLongReply && data.detail.choices[0].finish_reason === 'length') {
+                options.parentMessageId = data.id
+                lastText = data.text
+                message = ''
+                return fetchChatAPIOnce()
+              }
+            }
+            catch (error) {
+            //
+            }
+          },
+        })
+      }
     }
     await fetchChatAPIOnce()
   }
@@ -639,16 +795,19 @@ onUnmounted(() => {
           </HoverButton>
           <NAutoComplete v-model:value="prompt" :options="searchOptions" :render-label="renderOption">
             <template #default="{ handleInput, handleBlur, handleFocus }">
-              <NInput
-                v-model:value="prompt"
-                type="textarea"
-                :placeholder="placeholder"
-                :autosize="{ minRows: 1, maxRows: 2 }"
-                @input="handleInput"
-                @focus="handleFocus"
-                @blur="handleBlur"
-                @keypress="handleEnter"
-              />
+              <NInputGroup>
+                <NSelect v-model:value="searchType" :style="{ width: '120px' }" :options="selectOptions" />
+                <NInput
+                  v-model:value="prompt"
+                  type="textarea"
+                  :placeholder="placeholder"
+                  :autosize="{ minRows: 1, maxRows: isMobile ? 4 : 8 }"
+                  @input="handleInput"
+                  @focus="handleFocus"
+                  @blur="handleBlur"
+                  @keypress="handleEnter"
+                />
+              </NInputGroup>
             </template>
           </NAutoComplete>
           <NButton type="primary" :disabled="buttonDisabled" @click="handleSubmit">
