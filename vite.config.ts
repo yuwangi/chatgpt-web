@@ -37,9 +37,19 @@ export default defineConfig((env) => {
           rewrite: path => path.replace('/chat-web-api/', '/'),
         },
         '/chat-bing-api': {
+          // target: 'http://localhost:3002',
           target: 'http://146.56.142.221:3002',
+          // target: 'http://chat.yuwangi.fun:3002',
           changeOrigin: true, // 允许跨域
           rewrite: path => path.replace('/chat-bing-api/', '/'),
+        },
+        '/proxy-api': {
+          // target: viteEnv.VITE_APP_API_BASE_URL,
+          // target: 'http://localhost:3002',
+          target: 'https://chatbot.theb.ai/api',
+          // target: 'http://chat.yuwangi.fun:3002',
+          changeOrigin: true, // 允许跨域
+          rewrite: path => path.replace('/proxy-api/', '/'),
         },
       },
     },

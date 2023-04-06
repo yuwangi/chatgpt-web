@@ -9,8 +9,10 @@ let curIP = ''
 
 service.interceptors.request.use(
   (config) => {
-    console.log('config', config)
+    // console.log('config', config)
     if (config?.url?.includes('chat-bing-api'))
+      config.baseURL = ''
+    if (config?.url?.includes('proxy-api'))
       config.baseURL = ''
 
     getUserIP((ip) => {

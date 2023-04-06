@@ -2,7 +2,8 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { storeToRefs } from 'pinia'
-import { NAutoComplete, NButton, NInput, NInputGroup, NSelect, useDialog, useMessage } from 'naive-ui'
+import type { TreeSelectOption } from 'naive-ui'
+import { NAutoComplete, NButton, NInput, NInputGroup, NTreeSelect, useDialog, useMessage } from 'naive-ui'
 import html2canvas from 'html2canvas'
 import { Message } from './components'
 import { useScroll } from './hooks/useScroll'
@@ -43,17 +44,46 @@ const conversationList = computed(() => dataSources.value.filter(item => (!item.
 
 const prompt = ref<string>('')
 const loading = ref<boolean>(false)
-const searchType = ref<string>('ChatGPT')
-const selectOptions = ref([
-  {
-    label: 'ChatGPT',
-    value: 'ChatGPT',
-  },
-  {
-    label: 'Bing',
-    value: 'bing',
-  },
-])
+const searchType = ref('ChatGPT')
+const curModel = ref('gpt-3.5')
+const isChageModel = ref<boolean>(false)
+
+const selectOptions = [{
+  label: 'ChatGPT',
+  key: 'ChatGPT',
+  children: [{
+    label: 'gpt-3.5',
+    key: 'gpt-3.5',
+  }, {
+    label: 'gpt-4',
+    key: 'gpt-4',
+  }],
+},
+{
+  label: 'Bing',
+  key: 'bing',
+  children: [
+  //   {
+  //   label: '正常',
+  //   key: 'normal',
+  //   children: [{
+  //     label: '均衡',
+  //     key: 'balanced',
+  //   }, {
+  //     label: '创造',
+  //     key: 'creative',
+  //   }, {
+  //     label: '精确',
+  //     key: 'precise',
+  //   }],
+  // },
+    {
+      label: '越狱',
+      key: 'break',
+    }],
+
+},
+]
 
 // 添加PromptStore
 const promptStore = usePromptStore()
@@ -62,6 +92,13 @@ const { promptList: promptTemplate } = storeToRefs<any>(promptStore)
 
 function handleSubmit() {
   onConversation()
+}
+
+function handleUpdateValue(value: string, option: TreeSelectOption | null | Array<TreeSelectOption | null>) {
+  // console.log(value, option, searchType.value)
+  isChageModel.value = true
+  searchType.value = (value === 'gpt-3.5' || value === 'gpt-4') ? 'ChatGPT' : 'bing'
+  curModel.value = value
 }
 
 async function onConversation() {
@@ -93,21 +130,13 @@ async function onConversation() {
   prompt.value = ''
 
   let options: Chat.ConversationRequest = {}
-  const lastContact = conversationList.value[conversationList.value.length - 1]?.text || ''
+  // const lastContact = conversationList.value[conversationList.value.length - 1]?.text || ''
   const lastContext = conversationList.value[conversationList.value.length - 1]?.conversationOptions
-  console.log('lastContext_____________', lastContact)
-  if (lastContext && usingContext.value)
+  // console.log('lastContext_____________', lastContact)
+  if (lastContext && usingContext.value && isChageModel.value === false)
     options = { ...lastContext }
 
-  const type = searchType.value
-  if (options?.fromTo === 'bing') {
-    if (type === 'ChatGPT')
-      options = {}
-  }
-  else {
-    if (type === 'bing')
-      options = {}
-  }
+  isChageModel.value = false
 
   addChat(
     +uuid,
@@ -131,6 +160,7 @@ async function onConversation() {
         await fetchChatAPIProcess<Chat.ConversationResponse>({
           prompt: message,
           options,
+          model: curModel.value,
           signal: controller.signal,
           onDownloadProgress: ({ event }) => {
             const xhr = event.target
@@ -143,9 +173,11 @@ async function onConversation() {
             try {
               const data = JSON.parse(chunk)
               // lastContact.length +
-              const length: number = message.length + (data.text || '').length
+              const priceRateMessage = curModel.value === 'gpt-3.5' ? 10 : 150
+              const priceRateResponse = curModel.value === 'gpt-3.5' ? 10 : 300
+              const length: number = message.length * priceRateMessage + (data.text || '').length * priceRateResponse
 
-              const cost = Number(Number(length * 1 * 10 * 0.000014).toFixed(6))
+              const cost = Number(Number(length * 1 * 0.000014).toFixed(6))
 
               costTotal = cost
               updateChat(
@@ -185,7 +217,7 @@ async function onConversation() {
           onDownloadProgress: ({ event }) => {
             const xhr = event.target
             const { responseText } = xhr
-            console.log('responseText----------', responseText)
+            // console.log('responseText----------', responseText)
             // Always process the final line
             const lastIndex = responseText.lastIndexOf('\n')
             let chunk = responseText
@@ -196,7 +228,7 @@ async function onConversation() {
               // const length: number = lastContact.length + message.length + (data.text || '').length
               let text = lastText + data.text ?? ''
 
-              console.log('bingData>>>>>>>>>', data)
+              // console.log('bingData>>>>>>>>>', data)
               if (data.conversationId) {
                 const list = data.details.sourceAttributions || []
                 if (list && list.length > 0)
@@ -316,7 +348,7 @@ async function onRegenerate(index: number) {
   controller = new AbortController()
 
   const { requestOptions } = dataSources.value[index]
-  console.log('dataSources.value[index]', dataSources.value[index])
+  // console.log('dataSources.value[index]', dataSources.value[index])
 
   let message = requestOptions?.prompt ?? ''
 
@@ -359,6 +391,7 @@ async function onRegenerate(index: number) {
         await fetchChatAPIProcess<Chat.ConversationResponse>({
           prompt: message,
           options,
+          model: curModel.value,
           signal: controller.signal,
           onDownloadProgress: ({ event }) => {
             const xhr = event.target
@@ -371,9 +404,12 @@ async function onRegenerate(index: number) {
             try {
               const data = JSON.parse(chunk)
               // lastContact.length +
-              const length: number = message.length + (data.text || '').length
+              const priceRateMessage = curModel.value === 'gpt-3.5' ? 10 : 150
+              const priceRateResponse = curModel.value === 'gpt-3.5' ? 10 : 300
+              const length: number = message.length * priceRateMessage + (data.text || '').length * priceRateResponse
 
-              const cost = Number(Number(length * 1 * 10 * 0.000014).toFixed(6))
+              const cost = Number(Number(length * 1 * 0.000014).toFixed(6))
+
               costTotal = cost
               updateChat(
                 +uuid,
@@ -420,7 +456,7 @@ async function onRegenerate(index: number) {
               const data = JSON.parse(chunk)
               let text = lastText + data.text ?? ''
 
-              console.log('bingData>>>>>>>>>', data)
+              // console.log('bingData>>>>>>>>>', data)
               if (data.conversationId) {
                 const list = data.details.sourceAttributions || []
                 if (list && list.length > 0)
@@ -704,7 +740,8 @@ onUnmounted(() => {
             <div class="flex flex-col items-center text-sm h-full ">
               <div class="text-gray-800 w-full md:max-w-2xl lg:max-w-3xl md:h-full md:flex md:flex-col px-6 dark:text-gray-100">
                 <h1 class="text-4xl font-semibold mt-10 ml-auto mr-auto mb-16">
-                  {{ $t('common.hellow') }} - ChatGPT
+                  ChatGPT
+                  <!-- {{ $t('common.hellow') }} -  -->
                 </h1>
                 <div class="flex items-start text-center gap-3.5">
                   <div class="flex flex-col gap-3.5 flex-1">
@@ -796,7 +833,19 @@ onUnmounted(() => {
           <NAutoComplete v-model:value="prompt" :options="searchOptions" :render-label="renderOption">
             <template #default="{ handleInput, handleBlur, handleFocus }">
               <NInputGroup>
-                <NSelect v-model:value="searchType" :style="{ width: '120px' }" :options="selectOptions" />
+                <!-- <NSelect v-model:value="searchType" :style="{ width: '120px' }" :options="selectOptions" /> -->
+                <NTreeSelect
+
+                  :style="{ width: '120px' }"
+                  :consistent-menu-width="false"
+                  placeholder="模型"
+                  expand-trigger="click"
+                  :options="selectOptions"
+                  check-strategy="child"
+                  default-value="gpt-3.5"
+                  :show-path="true"
+                  @update:value="handleUpdateValue"
+                />
                 <NInput
                   v-model:value="prompt"
                   type="textarea"

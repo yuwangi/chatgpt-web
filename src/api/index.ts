@@ -25,12 +25,14 @@ export function fetchChatAPIProcess<T = any>(
     prompt: string
     options?: { conversationId?: string; parentMessageId?: string }
     signal?: GenericAbortSignal
+    model?: string
     onDownloadProgress?: (progressEvent: AxiosProgressEvent) => void },
 ) {
   const times = new Date().getTime()
   const random = times.toString().slice(-5)
+
   return post<T>({
-    url: '/chat-process',
+    url: params.model === 'gpt-3.5' ? '/proxy-api/chat-process' : '/proxy-api/chat-process4',
     data: { secretKey: getToken(), random, prompt: params.prompt, times, options: params.options, salt: enCrypto(`yuwangifeng${params.prompt.length}19901102${random}`, `${random}`) },
     signal: params.signal,
 
@@ -47,6 +49,7 @@ export function fetchBingAPIProcess<T = any>(
 ) {
   const times = new Date().getTime()
   const random = times.toString().slice(-5)
+
   return post<T>({
     url: '/chat-bing-api/bing-process',
     data: { secretKey: getToken(), random, prompt: params.prompt, times, options: params.options, salt: enCrypto(`yuwangifeng${params.prompt.length}19901102${random}`, `${random}`) },

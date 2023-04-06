@@ -27,7 +27,12 @@ declare namespace Chat {
 		conversationId?: string
 		parentMessageId?: string
 		fromTo?:string
+		model?:string
 		jailbreakConversationId?:string
+		conversationSignature?:string
+		conversationId?:string
+		clientId?:string
+		invocationId?:string
 	}
 
 	interface ConversationResponse {
