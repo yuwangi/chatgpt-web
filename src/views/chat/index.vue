@@ -1,4 +1,5 @@
 <script setup lang='ts'>
+import type { Ref } from 'vue'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { storeToRefs } from 'pinia'
@@ -31,7 +32,7 @@ useCopyCode()
 
 const { isMobile } = useBasicLayout()
 const { addChat, updateChat, updateChatSome, getChatByUuidAndIndex } = useChat()
-const { scrollRef, scrollToBottom } = useScroll()
+const { scrollRef, scrollToBottom, scrollToBottomIfAtBottom } = useScroll()
 const { usingContext, toggleUsingContext } = useUsingContext()
 
 const { uuid } = route.params as { uuid: string }
@@ -84,11 +85,19 @@ const selectOptions = [{
 
 },
 ]
+const inputRef = ref<Ref | null>(null)
 
 // 添加PromptStore
 const promptStore = usePromptStore()
+
 // 使用storeToRefs，保证store修改后，联想部分能够重新渲染
 const { promptList: promptTemplate } = storeToRefs<any>(promptStore)
+
+// 未知原因刷新页面，loading 状态不会重置，手动重置
+dataSources.value.forEach((item, index) => {
+  if (item.loading)
+    updateChatSome(+uuid, index, { loading: false })
+})
 
 function handleSubmit() {
   onConversation()
@@ -201,7 +210,7 @@ async function onConversation() {
                 return fetchChatAPIOnce()
               }
 
-              scrollToBottom()
+              scrollToBottomIfAtBottom()
             }
             catch (error) {
               //
@@ -287,7 +296,7 @@ async function onConversation() {
           loading: false,
         },
       )
-      scrollToBottom()
+      scrollToBottomIfAtBottom()
       return
     }
 
@@ -321,7 +330,7 @@ async function onConversation() {
         requestOptions: { prompt: message, options: { ...options } },
       },
     )
-    scrollToBottom()
+    scrollToBottomIfAtBottom()
   }
   finally {
     loading.value = false
@@ -380,7 +389,7 @@ async function onRegenerate(index: number) {
       error: false,
       loading: true,
       conversationOptions: null,
-      requestOptions: { prompt: message, ...options },
+      requestOptions: { prompt: message, options: { ...options } },
     },
   )
 
@@ -496,6 +505,10 @@ async function onRegenerate(index: number) {
           },
         })
       }
+      //     }
+      //   },
+      // })
+      updateChatSome(+uuid, index, { loading: false })
     }
     await fetchChatAPIOnce()
   }
@@ -524,7 +537,7 @@ async function onRegenerate(index: number) {
         error: true,
         loading: false,
         conversationOptions: null,
-        requestOptions: { prompt: message, ...options },
+        requestOptions: { prompt: message, options: { ...options } },
       },
     )
   }
@@ -677,6 +690,7 @@ const searchOptions = computed(() => {
     return []
   }
 })
+
 // value反渲染key
 const renderOption = (option: { label: string }) => {
   for (const i of promptTemplate.value) {
@@ -705,6 +719,8 @@ const footerClass = computed(() => {
 
 onMounted(() => {
   scrollToBottom()
+  if (inputRef.value && !isMobile.value)
+    inputRef.value?.focus()
 })
 
 onUnmounted(() => {
@@ -722,11 +738,7 @@ onUnmounted(() => {
       @toggle-using-context="toggleUsingContext"
     />
     <main class="flex-1 overflow-hidden">
-      <div
-        id="scrollRef"
-        ref="scrollRef"
-        class="h-full overflow-hidden overflow-y-auto"
-      >
+      <div id="scrollRef" ref="scrollRef" class="h-full overflow-hidden overflow-y-auto">
         <div
           id="image-wrapper"
           class="w-full max-w-screen-xl m-auto dark:bg-[#101014]"
@@ -847,6 +859,7 @@ onUnmounted(() => {
                   @update:value="handleUpdateValue"
                 />
                 <NInput
+                  ref="inputRef"
                   v-model:value="prompt"
                   type="textarea"
                   :placeholder="placeholder"
