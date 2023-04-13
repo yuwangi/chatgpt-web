@@ -1,40 +1,40 @@
 <script setup lang='ts'>
-import { computed, onMounted, ref } from 'vue'
+import { ref } from 'vue'
 import { NImage, NSpin } from 'naive-ui'
-import { fetchChatConfig } from '@/api'
-import { useAuthStore } from '@/store'
+// import { useAuthStore } from '@/store'
 
-interface ConfigState {
-  timeoutMs?: number
-  reverseProxy?: string
-  apiModel?: string
-  socksProxy?: string
-  httpsProxy?: string
-  balance?: string
-}
+// interface ConfigState {
+//   timeoutMs?: number
+//   reverseProxy?: string
+//   apiModel?: string
+//   socksProxy?: string
+//   httpsProxy?: string
+//   balance?: string
+// }
 
-const authStore = useAuthStore()
+// const authStore = useAuthStore()
 
 const loading = ref(false)
 
-const config = ref<ConfigState>()
+// const config = ref<ConfigState>()
 
-const isChatGPTAPI = computed<boolean>(() => !!authStore.isChatGPTAPI)
+// const isChatGPTAPI = computed<boolean>(() => !!authStore.isChatGPTAPI)
 
-async function fetchConfig() {
-  try {
-    loading.value = true
-    const { data } = await fetchChatConfig<ConfigState>()
-    config.value = data
-  }
-  finally {
-    loading.value = false
-  }
-}
+// async function fetchConfig() {
+//   try {
+//     loading.value = true
+//     // console.log('isChatGPTAPI', isChatGPTAPI.value)
+//     const { data } = await fetchChatConfig<ConfigState>()
+//     config.value = data
+//   }
+//   finally {
+//     loading.value = false
+//   }
+// }
 
-onMounted(() => {
-  fetchConfig()
-})
+// onMounted(() => {
+//   // fetchConfig()
+// })
 </script>
 
 <template>

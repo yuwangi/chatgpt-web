@@ -51,7 +51,7 @@ export function fetchChatAPIProcess<T = any>(
       top_p: settingStore.top_p,
     }
   }
-  console.log(params.model)
+  // console.log(params.model)
   return post<T>({
     url: params.model === 'gpt-3.5' ? '/proxy-api/chat-process' : '/proxy-api/chat-process4',
     data,
