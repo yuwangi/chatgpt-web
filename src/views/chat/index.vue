@@ -39,7 +39,7 @@ const { uuid } = route.params as { uuid: string }
 // console.log('uuid', uuid)
 
 const dataSources = computed(() => chatStore.getChatByUuid(+uuid))
-const conversationList = computed(() => dataSources.value.filter(item => (!item.inversion && !item.error)))
+const conversationList = computed(() => dataSources.value.filter(item => (!item.inversion && !!item.conversationOptions)))
 
 // console.log('conversationList', conversationList.value)
 
